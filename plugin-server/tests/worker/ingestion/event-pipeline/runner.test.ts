@@ -18,7 +18,6 @@ import {
 } from '../../../../src/types'
 import { createEventsToDropByToken } from '../../../../src/utils/db/hub'
 import { parseJSON } from '../../../../src/utils/json-parse'
-import { cookielessServerHashStep } from '../../../../src/worker/ingestion/event-pipeline/cookielessServerHashStep'
 import { createEventStep } from '../../../../src/worker/ingestion/event-pipeline/createEventStep'
 import { emitEventStep } from '../../../../src/worker/ingestion/event-pipeline/emitEventStep'
 import * as metrics from '../../../../src/worker/ingestion/event-pipeline/metrics'
@@ -170,7 +169,6 @@ describe('EventPipelineRunner', () => {
         )
         runner = new TestEventPipelineRunner(hub, pluginEvent, undefined, undefined, personsStore)
 
-        jest.mocked(cookielessServerHashStep).mockResolvedValue([pluginEvent])
         jest.mocked(pluginsProcessEventStep).mockResolvedValue(pluginEvent)
 
         // @ts-expect-error this is just a mock
@@ -188,11 +186,10 @@ describe('EventPipelineRunner', () => {
     })
 
     describe('runEventPipeline()', () => {
-        it('runs steps starting from cookielessServerHashStep', async () => {
+        it('runs steps starting from pluginsProcessEventStep', async () => {
             await runner.runEventPipeline(pluginEvent, team)
 
             expect(runner.steps).toEqual([
-                'cookielessServerHashStep',
                 'pluginsProcessEventStep',
                 'transformEventStep',
                 'normalizeEventStep',
@@ -222,7 +219,6 @@ describe('EventPipelineRunner', () => {
             }
             await runner.runEventPipeline(event, team)
             expect(runner.steps).toEqual([
-                'cookielessServerHashStep',
                 'pluginsProcessEventStep',
                 'transformEventStep',
                 'normalizeEventStep',
@@ -268,7 +264,7 @@ describe('EventPipelineRunner', () => {
             it('stops processing after step', async () => {
                 await runner.runEventPipeline(pluginEvent, team)
 
-                expect(runner.steps).toEqual(['cookielessServerHashStep', 'pluginsProcessEventStep'])
+                expect(runner.steps).toEqual(['pluginsProcessEventStep'])
             })
 
             it('reports metrics and last step correctly', async () => {
@@ -437,7 +433,6 @@ describe('EventPipelineRunner', () => {
                 await runner.runEventPipeline(exceptionEvent, team)
 
                 expect(runner.steps).toEqual([
-                    'cookielessServerHashStep',
                     'pluginsProcessEventStep',
                     'transformEventStep',
                     'normalizeEventStep',
