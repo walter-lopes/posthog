@@ -357,9 +357,12 @@ export const maxThreadLogic = kea<maxThreadLogicType>([
         },
 
         retryLastMessage: () => {
-            const lastMessage = values.threadRaw.filter(isHumanMessage).pop() as HumanMessage | undefined
-            if (lastMessage) {
-                actions.askMax(lastMessage.content)
+            const lastHumanMessageIndex = values.threadRaw.findLastIndex((message) => isHumanMessage(message))
+            const lastHumanMessage = values.threadRaw[lastHumanMessageIndex] as HumanMessage | undefined
+            if (lastHumanMessage) {
+                const threadWithoutLastMessagePair = values.threadRaw.slice(0, lastHumanMessageIndex)
+                actions.setThread(threadWithoutLastMessagePair)
+                actions.askMax(lastHumanMessage.content)
             }
         },
 
