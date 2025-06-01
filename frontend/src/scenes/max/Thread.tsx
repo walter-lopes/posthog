@@ -26,9 +26,11 @@ import { useActions, useValues } from 'kea'
 import { BreakdownSummary, PropertiesSummary, SeriesSummary } from 'lib/components/Cards/InsightCard/InsightDetails'
 import { TopHeading } from 'lib/components/Cards/InsightCard/TopHeading'
 import { ProductIntroduction } from 'lib/components/ProductIntroduction/ProductIntroduction'
+import { dayjs } from 'lib/dayjs'
 import { IconOpenInNew, IconSync } from 'lib/lemon-ui/icons'
 import posthog from 'posthog-js'
 import React, { useEffect, useMemo, useState } from 'react'
+import { StatusTag } from 'scenes/experiments/ExperimentView/components'
 import { insightSceneLogic } from 'scenes/insights/insightSceneLogic'
 import { insightVizDataLogic } from 'scenes/insights/insightVizDataLogic'
 import { urls } from 'scenes/urls'
@@ -173,6 +175,17 @@ function MessageGroup({ messages, isFinal: isFinalGroup }: MessageGroupProps): J
                                     id={message.id || 'no-text'}
                                 />
                             </MessageTemplate>
+                        )
+                    } else if (isAssistantToolCallMessage(message) && message.ui_payload.search_experiments) {
+                        /**
+                         * this is terrible. We need a registerMessage thing.
+                         */
+                        return (
+                            <ExperimentsResults
+                                key={key}
+                                experiments={message.ui_payload.search_experiments}
+                                message={message}
+                            />
                         )
                     } else if (
                         isAssistantMessage(message) ||
@@ -571,5 +584,65 @@ function SuccessActions({ retriable }: { retriable: boolean }): JSX.Element {
                 </MessageTemplate>
             )}
         </>
+    )
+}
+
+type ExperimentsResultsProps = {
+    experiments: any[]
+    message: AssistantToolCallMessage & ThreadMessage
+}
+
+const ExperimentsResults = ({ experiments, message }: ExperimentsResultsProps): JSX.Element => {
+    const { askMax } = useActions(maxThreadLogic)
+
+    return (
+        <MessageTemplate type="ai">
+            <div className="space-y-3">
+                <div>{message.content}</div>
+
+                {experiments.length > 0 && (
+                    <div className="space-y-2 mt-3">
+                        {experiments.map((experiment) => (
+                            <div key={experiment.id} className="border rounded-lg p-3 hover:bg-accent/5 transition">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0 flex-1">
+                                        <h4 className="font-semibold m-0">{experiment.name}</h4>
+                                        {experiment.description && (
+                                            <p className="text-sm text-muted mt-1">{experiment.description}</p>
+                                        )}
+                                    </div>
+                                    <StatusTag experiment={experiment} />
+                                </div>
+
+                                <div className="flex items-center gap-4 mt-2 text-xs text-muted">
+                                    {experiment.start_date && (
+                                        <span>Started: {dayjs(experiment.start_date).format('MMM D, YYYY')}</span>
+                                    )}
+                                    {experiment.end_date && (
+                                        <span>Ended: {dayjs(experiment.end_date).format('MMM D, YYYY')}</span>
+                                    )}
+                                </div>
+
+                                <div className="mt-3 flex gap-2">
+                                    <LemonButton size="small" type="secondary" to={urls.experiment(experiment.id)}>
+                                        View details
+                                    </LemonButton>
+                                    <LemonButton
+                                        size="small"
+                                        type="tertiary"
+                                        onClick={() => {
+                                            // Ask Max to analyze this specific experiment
+                                            askMax(`Analyze the results of the "${experiment.name}" experiment`)
+                                        }}
+                                    >
+                                        Analyze results
+                                    </LemonButton>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </MessageTemplate>
     )
 }
