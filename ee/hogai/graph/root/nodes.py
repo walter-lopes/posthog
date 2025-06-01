@@ -37,6 +37,8 @@ from .prompts import (
     ROOT_SYSTEM_PROMPT,
 )
 
+from products.experiments.backend.max_tools import SearchExperimentsTool
+
 # TRICKY: Dynamically import max_tools from all products
 for module_info in pkgutil.iter_modules(products.__path__):
     if module_info.name in ("conftest", "test"):
@@ -140,6 +142,10 @@ class RootNode(AssistantNode):
             except ValueError:
                 continue  # Ignoring a tool that the backend doesn't know about - might be a deployment mismatch
             available_tools.append(ToolClass())  # type: ignore
+
+        # append search experiments as a global tool because... well, I coudn't find another way to do it
+        available_tools.append(SearchExperimentsTool())
+
         return base_model.bind_tools(available_tools, strict=True, parallel_tool_calls=False)
 
     def _get_assistant_messages_in_window(self, state: AssistantState) -> list[RootMessageUnion]:
@@ -277,6 +283,25 @@ class RootNodeTools(AssistantNode):
                 root_tool_call_id=tool_call.id,
                 root_tool_insight_plan=None,  # No insight plan here
                 root_tool_insight_type=None,  # No insight type here
+                root_tool_calls_count=tool_call_count + 1,
+            )
+        elif tool_call.name == "search_experiments":
+            # Handle like a MaxTool but without the registration overhead
+            tool = SearchExperimentsTool(state)
+            tool._team_id = self._team.id
+            tool._config = config  # Pass the config too
+            content, artifact = tool._run_impl(**tool_call.args)
+
+            return PartialAssistantState(
+                messages=[
+                    AssistantToolCallMessage(
+                        content=content,
+                        ui_payload={"search_experiments": artifact},
+                        id=str(uuid4()),
+                        tool_call_id=tool_call.id,
+                        visible=True,
+                    )
+                ],
                 root_tool_calls_count=tool_call_count + 1,
             )
         elif ToolClass := CONTEXTUAL_TOOL_NAME_TO_TOOL.get(cast(AssistantContextualTool, tool_call.name)):
