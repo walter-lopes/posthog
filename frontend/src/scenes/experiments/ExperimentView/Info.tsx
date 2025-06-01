@@ -1,6 +1,5 @@
 import { IconPencil, IconRefresh, IconWarning } from '@posthog/icons'
-import { LemonButton, Link, ProfilePicture, Tooltip } from '@posthog/lemon-ui'
-import { LemonModal } from '@posthog/lemon-ui'
+import { LemonButton, LemonModal, Link, ProfilePicture, Tooltip } from '@posthog/lemon-ui'
 import clsx from 'clsx'
 import { useActions, useValues } from 'kea'
 import { CopyToClipboardInline } from 'lib/components/CopyToClipboard'
@@ -16,6 +15,7 @@ import { ProgressStatus } from '~/types'
 import { CONCLUSION_DISPLAY_CONFIG } from '../constants'
 import { experimentLogic } from '../experimentLogic'
 import { getExperimentStatus } from '../experimentsLogic'
+import { AISummary } from './AISummary'
 import { StatusTag } from './components'
 import { ExperimentDates } from './ExperimentDates'
 
@@ -218,6 +218,9 @@ export function Info(): JSX.Element {
                             />
                         </LemonModal>
                     </div>
+
+                    <AISummary />
+
                     {experiment.conclusion && experiment.end_date && (
                         <div className="w-[500px]">
                             <div className="flex items-center gap-2">
