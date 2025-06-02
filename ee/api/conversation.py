@@ -18,10 +18,8 @@ from ee.models.assistant import Conversation
 from posthog.api.routing import TeamAndOrgViewSetMixin
 from posthog.exceptions import Conflict
 from posthog.models.user import User
-from posthog.rate_limit import AIBurstRateThrottle, AISustainedRateThrottle
 from posthog.renderers import ServerSentEventRenderer
 from posthog.schema import HumanMessage
-from posthog.utils import get_instance_region
 
 
 class MessageSerializer(serializers.Serializer):
@@ -57,11 +55,11 @@ class ConversationViewSet(TeamAndOrgViewSetMixin, ListModelMixin, RetrieveModelM
         return qs.filter(title__isnull=False, type=Conversation.Type.ASSISTANT).order_by("-updated_at")
 
     def get_throttles(self):
-        if self.action == "create" and not (
-            # Strict limits are skipped for select US region teams (PostHog + an active user we've chatted with)
-            get_instance_region() == "US" and self.team_id in (2, 87921)
-        ):
-            return [AIBurstRateThrottle(), AISustainedRateThrottle()]
+        # if self.action == "create" and not (
+        #     # Strict limits are skipped for select US region teams (PostHog + an active user we've chatted with)
+        #     get_instance_region() == "US" and self.team_id in (2, 87921)
+        # ):
+        #     return [AIBurstRateThrottle(), AISustainedRateThrottle()]
         return super().get_throttles()
 
     def get_renderers(self):
