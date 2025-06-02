@@ -147,6 +147,8 @@ def list_limited_team_attributes(resource: QuotaResource, cache_key: QuotaLimiti
 def org_quota_limited_until(
     organization: Organization, resource: QuotaResource, previously_quota_limited_team_tokens: list[str]
 ) -> Optional[OrgQuotaLimitingInformation]:
+    return None
+
     if not organization.usage:
         return None
 
