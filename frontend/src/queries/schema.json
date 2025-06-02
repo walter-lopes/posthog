@@ -633,7 +633,8 @@
                 "fix_hogql_query",
                 "analyze_user_interviews",
                 "create_and_query_insight",
-                "search_experiments"
+                "search_experiments",
+                "analyze_experiment"
             ],
             "type": "string"
         },

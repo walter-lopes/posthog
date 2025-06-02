@@ -68,6 +68,7 @@ class AssistantContextualTool(StrEnum):
     ANALYZE_USER_INTERVIEWS = "analyze_user_interviews"
     CREATE_AND_QUERY_INSIGHT = "create_and_query_insight"
     SEARCH_EXPERIMENTS = "search_experiments"
+    ANALYZE_EXPERIMENT = "analyze_experiment"
 
 
 class AssistantDateRange(BaseModel):

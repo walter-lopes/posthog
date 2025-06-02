@@ -116,3 +116,4 @@ export type AssistantContextualTool =
     | 'analyze_user_interviews'
     | 'create_and_query_insight'
     | 'search_experiments'
+    | 'analyze_experiment'

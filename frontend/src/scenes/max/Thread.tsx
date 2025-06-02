@@ -15,12 +15,15 @@ import {
 import {
     LemonButton,
     LemonButtonPropsBase,
+    LemonCard,
     LemonInput,
     LemonSkeleton,
+    LemonTable,
     ProfilePicture,
     Spinner,
     Tooltip,
 } from '@posthog/lemon-ui'
+
 import clsx from 'clsx'
 import { useActions, useValues } from 'kea'
 import { BreakdownSummary, PropertiesSummary, SeriesSummary } from 'lib/components/Cards/InsightCard/InsightDetails'
@@ -28,6 +31,7 @@ import { TopHeading } from 'lib/components/Cards/InsightCard/TopHeading'
 import { ProductIntroduction } from 'lib/components/ProductIntroduction/ProductIntroduction'
 import { dayjs } from 'lib/dayjs'
 import { IconOpenInNew, IconSync } from 'lib/lemon-ui/icons'
+import { LemonProgress } from 'lib/lemon-ui/LemonProgress'
 import posthog from 'posthog-js'
 import React, { useEffect, useMemo, useState } from 'react'
 import { StatusTag } from 'scenes/experiments/ExperimentView/components'
@@ -49,6 +53,7 @@ import { DataVisualizationNode, InsightVizNode, NodeKind } from '~/queries/schem
 import { isHogQLQuery } from '~/queries/utils'
 import { ProductKey } from '~/types'
 
+import { humanFriendlyNumber } from 'lib/utils'
 import { MarkdownMessage } from './MarkdownMessage'
 import { maxGlobalLogic } from './maxGlobalLogic'
 import { maxLogic, MessageStatus, ThreadMessage } from './maxLogic'
@@ -187,6 +192,11 @@ function MessageGroup({ messages, isFinal: isFinalGroup }: MessageGroupProps): J
                                 message={message}
                             />
                         )
+                    } else if (isAssistantToolCallMessage(message) && message.ui_payload.analyze_experiment) {
+                        /**
+                         * this is also terrible
+                         */
+                        return <ExperimentAnalyzeMessage key={key} message={message} />
                     } else if (
                         isAssistantMessage(message) ||
                         isAssistantToolCallMessage(message) ||
@@ -601,47 +611,147 @@ const ExperimentsResults = ({ experiments, message }: ExperimentsResultsProps): 
                 <div>{message.content}</div>
 
                 {experiments.length > 0 && (
-                    <div className="space-y-2 mt-3">
+                    <div className="space-y-3 mt-3">
                         {experiments.map((experiment) => (
-                            <div key={experiment.id} className="border rounded-lg p-3 hover:bg-accent/5 transition">
-                                <div className="flex items-start justify-between gap-2">
+                            <LemonCard key={experiment.id} className="p-0">
+                                <div className="flex items-start justify-between gap-2 p-4">
                                     <div className="min-w-0 flex-1">
                                         <h4 className="font-semibold m-0">{experiment.name}</h4>
                                         {experiment.description && (
-                                            <p className="text-sm text-muted mt-1">{experiment.description}</p>
+                                            <p className="text-xs text-muted mt-1">{experiment.description}</p>
                                         )}
                                     </div>
-                                    <StatusTag experiment={experiment} />
+                                    <StatusTag experiment={experiment} />{' '}
                                 </div>
-
-                                <div className="flex items-center gap-4 mt-2 text-xs text-muted">
+                                <div className="flex flex-wrap items-center gap-4 px-4 py-2 text-xs">
                                     {experiment.start_date && (
-                                        <span>Started: {dayjs(experiment.start_date).format('MMM D, YYYY')}</span>
+                                        <p className="text-xs text-muted">
+                                            Started: {dayjs(experiment.start_date).format('MMM D, YYYY')}
+                                        </p>
                                     )}
                                     {experiment.end_date && (
-                                        <span>Ended: {dayjs(experiment.end_date).format('MMM D, YYYY')}</span>
+                                        <p className="text-xs text-muted">
+                                            Ended: {dayjs(experiment.end_date).format('MMM D, YYYY')}
+                                        </p>
                                     )}
                                 </div>
-
-                                <div className="mt-3 flex gap-2">
+                                <div className="flex gap-2 px-4 py-3">
                                     <LemonButton size="small" type="secondary" to={urls.experiment(experiment.id)}>
-                                        View details
+                                        View
                                     </LemonButton>
                                     <LemonButton
                                         size="small"
-                                        type="tertiary"
+                                        type="primary"
                                         onClick={() => {
-                                            // Ask Max to analyze this specific experiment
-                                            askMax(`Analyze the results of the "${experiment.name}" experiment`)
+                                            askMax(
+                                                `Tell me more about "${experiment.name}" experiment (ID ${experiment.id})`
+                                            )
                                         }}
                                     >
-                                        Analyze results
+                                        Tell me more!
                                     </LemonButton>
                                 </div>
-                            </div>
+                            </LemonCard>
                         ))}
                     </div>
                 )}
+            </div>
+        </MessageTemplate>
+    )
+}
+
+type ExperimentAnalyzeProps = {
+    message: AssistantToolCallMessage & ThreadMessage
+}
+
+const ExperimentAnalyzeMessage = ({ message }: ExperimentAnalyzeProps): JSX.Element => {
+    const { experiment, results } = message.ui_payload.analyze_experiment
+
+    console.log('>>>>', experiment, message)
+
+    const actualRunningTime = dayjs().diff(experiment.start_date, 'day')
+    const recommendedSampleSize = experiment.parameters.recommended_sample_size!
+    const minimumDetectableEffect = experiment.parameters.minimum_detectable_effect!
+    const recommendedRunningTime = experiment.parameters.recommended_running_time!
+
+    return (
+        <MessageTemplate type="ai">
+            <div className="relative border rounded bg-surface-primary p-4 h-[280px] overflow-y-auto">
+                <LemonProgress
+                    className="w-full border"
+                    bgColor="var(--bg-table)"
+                    size="medium"
+                    percent={(actualRunningTime / recommendedRunningTime) * 100}
+                />
+                <div className="text-center mt-2 mb-4 text-xs text-muted">
+                    {actualRunningTime} of {humanFriendlyNumber(recommendedRunningTime, 0)} days completed (
+                    {Math.round((actualRunningTime / recommendedRunningTime) * 100)}%)
+                </div>
+
+                <div className="space-y-3">
+                    <div>
+                        <div className="card-secondary mb-1">Recommended sample size</div>
+                        <div className="text-sm font-semibold">
+                            {humanFriendlyNumber(recommendedSampleSize, 0)} users
+                        </div>
+                    </div>
+                    <div>
+                        <div className="card-secondary mb-1">Estimated running time</div>
+                        <div className="text-sm font-semibold">
+                            {humanFriendlyNumber(recommendedRunningTime, 0)} days
+                        </div>
+                    </div>
+                    <div>
+                        <div className="card-secondary mb-1">Minimum detectable effect</div>
+                        <div className="text-sm font-semibold">{minimumDetectableEffect}%</div>
+                    </div>
+                </div>
+            </div>
+            <div className="overflow-auto mt-1">
+                <LemonTable
+                    dataSource={results.timeseries || []}
+                    columns={[
+                        {
+                            title: 'Variant',
+                            key: 'variant',
+                            render: function Variant(_, series) {
+                                return (
+                                    <span className={clsx('flex items-center min-w-0')}>
+                                        <span className={`ml-2 font-semibold truncate`}>{series.variantKey}</span>
+                                    </span>
+                                )
+                            },
+                        },
+                        {
+                            title: 'Exposures',
+                            key: 'exposures',
+                            render: function Exposures(_, series) {
+                                return humanFriendlyNumber(results.total_exposures[series.variant])
+                            },
+                        },
+                        {
+                            title: '%',
+                            key: 'percentage',
+                            render: function Percentage(_, series) {
+                                let total = 0
+                                if (results.total_exposures) {
+                                    for (const [_, value] of Object.entries(results.total_exposures)) {
+                                        total += Number(value)
+                                    }
+                                }
+                                return (
+                                    <span className="font-semibold">
+                                        {total ? (
+                                            <>{((results.total_exposures[series.variant] / total) * 100).toFixed(1)}%</>
+                                        ) : (
+                                            <>-%</>
+                                        )}
+                                    </span>
+                                )
+                            },
+                        },
+                    ]}
+                />
             </div>
         </MessageTemplate>
     )

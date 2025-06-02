@@ -37,7 +37,7 @@ from .prompts import (
     ROOT_SYSTEM_PROMPT,
 )
 
-from products.experiments.backend.max_tools import SearchExperimentsTool
+from products.experiments.backend.max_tools import SearchExperimentsTool, AnalyzeExperimentTool
 
 # TRICKY: Dynamically import max_tools from all products
 for module_info in pkgutil.iter_modules(products.__path__):
@@ -143,8 +143,9 @@ class RootNode(AssistantNode):
                 continue  # Ignoring a tool that the backend doesn't know about - might be a deployment mismatch
             available_tools.append(ToolClass())  # type: ignore
 
-        # append search experiments as a global tool because... well, I coudn't find another way to do it
+        # append experiment tools as a global tool because... well, I coudn't find another way to do it
         available_tools.append(SearchExperimentsTool())
+        available_tools.append(AnalyzeExperimentTool())
 
         return base_model.bind_tools(available_tools, strict=True, parallel_tool_calls=False)
 
@@ -297,6 +298,25 @@ class RootNodeTools(AssistantNode):
                     AssistantToolCallMessage(
                         content=content,
                         ui_payload={"search_experiments": artifact},
+                        id=str(uuid4()),
+                        tool_call_id=tool_call.id,
+                        visible=True,
+                    )
+                ],
+                root_tool_calls_count=tool_call_count + 1,
+            )
+        elif tool_call.name == "analyze_experiment":
+            # Handle like a MaxTool but without the registration overhead
+            tool = AnalyzeExperimentTool(state)
+            tool._team_id = self._team.id
+            tool._config = config  # Pass the config too
+            content, artifact = tool._run_impl(**tool_call.args)
+
+            return PartialAssistantState(
+                messages=[
+                    AssistantToolCallMessage(
+                        content=content,
+                        ui_payload={"analyze_experiment": artifact},
                         id=str(uuid4()),
                         tool_call_id=tool_call.id,
                         visible=True,
