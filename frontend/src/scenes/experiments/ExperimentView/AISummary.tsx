@@ -60,6 +60,9 @@ export function AISummary(): JSX.Element {
             ? Math.max(0, Math.floor((new Date(experiment.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
             : null
 
+        /**
+         * this has to be use a backend tool. We need to figure out this...
+         */
         const prompt = `
 You are an expert product analyst. Write a short, clear summary (2-4 sentences) of the current state of the experiment "${
             experiment.name
