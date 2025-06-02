@@ -219,8 +219,6 @@ export function Info(): JSX.Element {
                         </LemonModal>
                     </div>
 
-                    <AISummary />
-
                     {experiment.conclusion && experiment.end_date && (
                         <div className="w-[500px]">
                             <div className="flex items-center gap-2">
@@ -250,6 +248,7 @@ export function Info(): JSX.Element {
                         </div>
                     )}
                 </div>
+                <AISummary />
             </div>
         </div>
     )

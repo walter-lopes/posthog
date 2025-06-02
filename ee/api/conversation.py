@@ -23,7 +23,7 @@ from posthog.schema import HumanMessage
 
 
 class MessageSerializer(serializers.Serializer):
-    content = serializers.CharField(required=True, max_length=1000)
+    content = serializers.CharField(required=True, max_length=10000)
     conversation = serializers.UUIDField(required=False)
     contextual_tools = serializers.DictField(required=False, child=serializers.JSONField())
     trace_id = serializers.UUIDField(required=True)

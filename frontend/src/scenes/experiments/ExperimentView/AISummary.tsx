@@ -29,12 +29,30 @@ export function AISummary(): JSX.Element {
         setLoading(true)
         setError(false)
 
-        // Extract key metrics from results
-        const results = metricResults?.[0]?.insight
-        const probability = results?.probability // or whatever field contains win probability
-        const winningVariant = results?.winning_variant
-        const conversionDiff = results?.relative_difference // or conversion rate difference
-        const isSignificant = results?.significant
+        const result = metricResults?.[0]
+        const variants = result?.variants || []
+        const probability = result?.probability // { control: number, test: number }
+        const isSignificant = result?.significant
+        const significanceCode = result?.significance_code
+        const pValue = result?.p_value
+        const credibleIntervals = result?.credible_intervals // { control: [low, high], test: [low, high] }
+        let winningVariant: string | null = null
+        let lift: string | null = null
+
+        if (probability && variants.length > 1) {
+            // Find the variant with the highest probability
+            const winner = Object.entries(probability).reduce((a, b) => (a[1] > b[1] ? a : b))
+            winningVariant = winner[0]
+            // Calculate lift as difference in success rates (or use credible intervals if you want)
+            const control = variants.find((v: any) => v.key === 'control')
+            const test = variants.find((v: any) => v.key !== 'control')
+            if (control && test) {
+                const controlRate = control.success_count / (control.success_count + control.failure_count)
+                const testRate = test.success_count / (test.success_count + test.failure_count)
+                lift = ((testRate - controlRate) * 100).toFixed(1)
+            }
+        }
+
         const daysRunning = experiment.start_date
             ? Math.floor((Date.now() - new Date(experiment.start_date).getTime()) / (1000 * 60 * 60 * 24))
             : 0
@@ -43,20 +61,50 @@ export function AISummary(): JSX.Element {
             : null
 
         const prompt = `
-            Write ONE concise sentence:
-            ${
-                isSignificant
-                    ? `${winningVariant} variant has ${probability}% win probability with ${conversionDiff}% lift`
-                    : `Experiment running ${daysRunning} days, ${
-                          daysRemaining ? `${daysRemaining} days left` : 'ongoing'
-                      }, no significant results yet`
-            }
+You are an expert product analyst. Write a short, clear summary (2-4 sentences) of the current state of the experiment "${
+            experiment.name
+        }". Provide a bit of analysis, not just a single line.
 
-            Rewrite this as a natural sentence, max 15 words. Examples:
-            - "Control winning with 95% probability (+12% conversion)"
-            - "Too early, 8 days remaining"
-            - "No clear winner after 14 days"
-        `
+Experiment details:
+- Name: ${experiment.name}
+- Status: ${getExperimentStatus(experiment)}
+- Days running: ${daysRunning}
+${daysRemaining !== null ? `- Days remaining: ${daysRemaining}` : ''}
+- Variants: ${variants.map((v: any) => v.key).join(', ')}
+- P-value: ${pValue !== undefined ? pValue : 'N/A'}
+
+Results:
+${variants
+    .map(
+        (v: any) =>
+            `- ${v.key}: ${v.success_count} conversions, ${v.failure_count} non-conversions, credible interval: [${
+                credibleIntervals?.[v.key]?.[0]?.toFixed(3) ?? 'N/A'
+            }, ${credibleIntervals?.[v.key]?.[1]?.toFixed(3) ?? 'N/A'}], probability of being best: ${
+                probability?.[v.key] !== undefined ? (probability[v.key] * 100).toFixed(1) + '%' : 'N/A'
+            }`
+    )
+    .join('\n')}
+
+${
+    isSignificant && winningVariant
+        ? `- Winner: ${winningVariant} (win probability: ${(probability?.[winningVariant] * 100).toFixed(
+              1
+          )}%, lift: ${lift}%)`
+        : '- No statistically significant winner yet.'
+}
+
+Instructions:
+- If there is a significant winner, mention the variant, win probability, lift, and what this means for the experiment.
+- If not, mention how long the experiment has been running, how much time is left, and whether the results are trending toward significance or if more data is needed.
+- Comment on the relative performance of the variants, even if not significant, and mention the credible intervals and p-value if relevant.
+- Do NOT speculate or invent results that are not in the data.
+- Write as a product analyst would, not as an AI. Use clear, professional language.
+
+Examples:
+- "After 14 days, the test variant is leading with a 95% probability of being the best, showing a 12% lift over control. This result is statistically significant and suggests the test variant is outperforming the baseline."
+- "The experiment has been running for 8 days with no significant difference between variants. More data is needed to draw a conclusion."
+- "Control and test variants are performing similarly so far, with the test variant showing a slight, but not significant, improvement. Credible intervals overlap and the p-value is above the significance threshold."
+`
 
         try {
             abortControllerRef.current = new AbortController()

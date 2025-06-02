@@ -667,8 +667,6 @@ type ExperimentAnalyzeProps = {
 const ExperimentAnalyzeMessage = ({ message }: ExperimentAnalyzeProps): JSX.Element => {
     const { experiment, results } = message.ui_payload.analyze_experiment
 
-    console.log('>>>>', experiment, message)
-
     const actualRunningTime = dayjs().diff(experiment.start_date, 'day')
     const recommendedSampleSize = experiment.parameters.recommended_sample_size!
     const minimumDetectableEffect = experiment.parameters.minimum_detectable_effect!
@@ -676,7 +674,7 @@ const ExperimentAnalyzeMessage = ({ message }: ExperimentAnalyzeProps): JSX.Elem
 
     return (
         <MessageTemplate type="ai">
-            <div className="relative border rounded bg-surface-primary p-4 h-[280px] overflow-y-auto">
+            <div className="relative border rounded bg-surface-primary p-4 overflow-y-auto">
                 <LemonProgress
                     className="w-full border"
                     bgColor="var(--bg-table)"
@@ -716,8 +714,8 @@ const ExperimentAnalyzeMessage = ({ message }: ExperimentAnalyzeProps): JSX.Elem
                             key: 'variant',
                             render: function Variant(_, series) {
                                 return (
-                                    <span className={clsx('flex items-center min-w-0')}>
-                                        <span className={`ml-2 font-semibold truncate`}>{series.variantKey}</span>
+                                    <span className="flex items-center min-w-0">
+                                        <span className="ml-2 font-semibold truncate">{series.variant}</span>
                                     </span>
                                 )
                             },
