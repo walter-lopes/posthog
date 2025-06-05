@@ -8,7 +8,7 @@ import {
 } from '~/queries/schema/schema-general'
 import { ExperimentIdType } from '~/types'
 
-import { ExploreButton, ResultsQuery } from '../ExperimentView/components'
+import { ExploreButton, LegacyResultsQuery } from '../ExperimentView/components'
 import { SignificanceText, WinningVariantText } from '../ExperimentView/Overview'
 import { SummaryTable } from '../ExperimentView/SummaryTable'
 
@@ -59,7 +59,7 @@ export function ChartModal({
             </LemonBanner>
             <SummaryTable metric={metric} metricIndex={metricIndex} isSecondary={isSecondary} />
             {/* Only show results query if the metric is a trends or funnels query */}
-            {isLegacyResult && <ResultsQuery result={result} showTable={true} />}
+            {isLegacyResult && <LegacyResultsQuery result={result} showTable={true} />}
         </LemonModal>
     )
 }
