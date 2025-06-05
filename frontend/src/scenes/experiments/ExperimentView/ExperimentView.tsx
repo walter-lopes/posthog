@@ -82,7 +82,11 @@ const ResultsTab = (): JSX.Element => {
                                 <ExploreButton result={metricResults[0]} size="xsmall" />
                             </div>
                             <div className="pb-4">
-                                <ResultsQuery result={metricResults?.[0] || null} showTable={true} />
+                                <ResultsQuery
+                                    experiment={experiment}
+                                    result={metricResults[0] || null}
+                                    showTable={true}
+                                />
                             </div>
                         </>
                     )}
