@@ -2,8 +2,6 @@ import { LemonTabs } from '@posthog/lemon-ui'
 import { useActions, useValues } from 'kea'
 import { WebExperimentImplementationDetails } from 'scenes/experiments/WebExperimentImplementationDetails'
 
-import type { CachedExperimentQueryResponse } from '~/queries/schema/schema-general'
-
 import { ExperimentImplementationDetails } from '../ExperimentImplementationDetails'
 import { experimentLogic } from '../experimentLogic'
 import { ExperimentMetricModal } from '../Metrics/ExperimentMetricModal'
@@ -88,10 +86,7 @@ const ResultsTab = (): JSX.Element => {
                                 {isLegacyExperimentQuery(metricResults[0]) ? (
                                     <LegacyResultsQuery result={metricResults[0] || null} showTable={true} />
                                 ) : (
-                                    <ResultsQuery
-                                        experiment={experiment}
-                                        result={metricResults[0] as CachedExperimentQueryResponse}
-                                    />
+                                    <ResultsQuery experiment={experiment} result={null} />
                                 )}
                             </div>
                         </>
